@@ -303,17 +303,12 @@
             var q=0;
             var aq=[]
             for (let i = 0; i < eff.length; i++) {
-                
-                if (i==nbg.length-1) {
-                     q=Number((q+tfi[i]).toFixed(0));
-                     aq[i]=q;
-                } 
-                else{
-                    q=Number((q+qiacc[i]).toFixed(3));
-                    aq[i]=q;
-                }
-              all=all+ "<td width='10px'>"+ q +"</td>"
+                q = q + qiacc[i];
+                aq.push(q);
+                var displayQ = (i === eff.length - 1) ? 1 : Number(q.toFixed(3));
+                all = all + "<td width='10px'>" + displayQ + "</td>";
             }
+            if (aq.length > 0) { aq[aq.length - 1] = 1; }
            all=all+"</tr></table>"
            document.getElementById("table").innerHTML=all
         // pop
@@ -398,33 +393,27 @@
             document.getElementsByClassName("form")[0].innerHTML+= " symétrique";  
         }
         else if (mode<mediane  && mediane<X) {
-            document.getElementsByClassName("form")[0].innerHTML+= " dissymétrique à gauche";
+            document.getElementsByClassName("form")[0].innerHTML+= " dissymétrique à droite";
         }
         else if (mode>mediane && mediane>X) {
-            document.getElementsByClassName("form")[0].innerHTML+= " dissymétrique à droite";
+            document.getElementsByClassName("form")[0].innerHTML+= " dissymétrique à gauche";
         }
         // q1
         var pq1=pop*0.25;
-        var s=eff[0];
+        var cum1=0;
         var q1=nbg[0]
-        for (let i = 1; i < nbg.length; i++) {
-            if (pq1<=s) {
-                 q1=nbg[i-1]
-                break
-            }
-          s=s+eff[i]  
+        for (let i = 0; i < nbg.length; i++) {
+            cum1 = cum1 + eff[i];
+            if (cum1 >= pq1) { q1 = nbg[i]; break }
         }
         document.getElementsByClassName("Q1")[0].innerHTML+= q1; 
         // q3
         var pq3=pop*0.75;
-        var s=eff[0];
+        var cum3=0;
         var q3=nbg[0]
-        for (let i = 1; i < nbg.length; i++) {
-            if (pq3<=s) {
-                 q3=nbg[i-1]
-                break
-            }
-          s=s+eff[i]  
+        for (let i = 0; i < nbg.length; i++) {
+            cum3 = cum3 + eff[i];
+            if (cum3 >= pq3) { q3 = nbg[i]; break }
         }
         document.getElementsByClassName("Q3")[0].innerHTML+= q3; 
         // q3-q1
@@ -436,22 +425,26 @@
         for (let i = 0; i < nbg.length; i++) {
             s=s+eff[i]*(Math.abs(nbg[i]-mediane))
         }
-        var emed= Number(s/pop.toFixed(3));
+        var emed= Number((s/pop).toFixed(3));
         document.getElementsByClassName("emed")[0].innerHTML+= emed;
         // ecart abs moyen moyenne
         var s=0;
         for (let i = 0; i < nbg.length; i++) {
             s=s+eff[i]*(Math.abs(nbg[i]-X))
         }
-        var emoy= Number(s/pop.toFixed(3));
+        var emoy= Number((s/pop).toFixed(3));
         document.getElementsByClassName("emoy")[0].innerHTML+= emoy;
-        // indice de gini
-        var ig=0;
-        for (let i = 0; i < nbg.length-1; i++) {
-            ig=ig+(aq[i+1]*af[i]-aq[i]*af[i+1])
+        // indice de gini (standard trapezoid method on Lorenz curve)
+        var F = [0].concat(af);
+        var S = [0].concat(aq);
+        if (F[F.length-1] !== 1) { F[F.length-1] = 1; }
+        if (S[S.length-1] !== 1) { S[S.length-1] = 1; }
+        var area = 0;
+        for (let i = 1; i < F.length; i++) {
+            area += ((S[i] + S[i-1]) * (F[i] - F[i-1])) / 2;
         }
-        var round= Number(ig.toFixed(3));
-        document.getElementsByClassName("ing")[0].innerHTML+= round; 
+        var gini = Number((1 - 2*area).toFixed(3));
+        document.getElementsByClassName("ing")[0].innerHTML+= gini; 
         // graph
         var ctx = document.getElementById('myChart').getContext('2d');     
         var chart = new Chart(ctx, {

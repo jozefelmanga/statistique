@@ -346,61 +346,55 @@
                 var q=0;
                 var aq=[]
             for (var i = 0; i <nbg.length; i++) {
-                 q=Number((qiup[i]+q).toFixed(3));
-                 if (i==nbg.length-1) {
-                     q=Number((q).toFixed(0));
-                } 
-                aq.push(q)
-               all=all+"<td width='10px'>"+ q +"</td>"
+                 q = q + qiup[i];
+                 aq.push(q);
+                 var displayQ = (i === nbg.length - 1) ? 1 : Number(q.toFixed(3));
+                 all=all+"<td width='10px'>"+ displayQ +"</td>"
             }
+            if (aq.length > 0) { aq[aq.length - 1] = 1; }
            
            all=all+"</tr></table>"
            document.getElementById("table").innerHTML=all
         
 
         // class modale
-       
-        var check=true;
-        var am=amp[0]
-        for (let i = 1; i < nbg.length; i++) {
-            if (am=!amp[i]) {
-                check=false;
-                break
+        var equalWidths = true;
+        var am = tamp[0];
+        for (let i = 1; i < tamp.length; i++) {
+            if (tamp[i] !== am) { equalWidths = false; break; }
+        }
+        var p = 0;
+        if (equalWidths) {
+            var maxEff = nbg[0];
+            for (var i = 1; i < nbg.length; i++) {
+                if (nbg[i] > maxEff) { maxEff = nbg[i]; p = i; }
+            }
+        } else {
+            var maxDen = clmo[0];
+            for (var i = 1; i < nbg.length; i++) {
+                if (clmo[i] > maxDen) { maxDen = clmo[i]; p = i; }
             }
         }
-            if (check==true) {
-                var mo=nbg[0];
-                var p=0;
-                for (var i = 1; i <nbg.length; i++){
-                    if (nbg[i]>mo) {
-                        mo=nbg[i];
-                        p=i;
-                    }
-                } 
-            }
-            
-            else{
-                var mo=clmo[0];
-                var p=0;
-                for (var i = 1; i <nbg.length; i++){
-                    if (clmo[i]>mo) {
-                        mo=clmo[i];
-                        p=i;
-                    }
-                } 
-            }
                 
                 document.getElementsByClassName("class-modale")[0].innerHTML+= eff_tab[p]; 
 
-        // mode
-        if (p==a) {
-            var mode =eff[p*2]+(eff[p*2+1]-eff[p*2])*(nbg[p-1]-nbg[p-2])/(nbg[p-1]-nbg[p-2]+nbg[p-1])
+        // mode (grouped data using histogram heights)
+        var L = eff[p*2];
+        var U = eff[p*2+1];
+        var h = U - L;
+        var height = equalWidths ? nbg : clmo;
+        var fm = height[p];
+        var fprev = (p > 0) ? height[p-1] : 0;
+        var fnext = (p < nbg.length - 1) ? height[p+1] : 0;
+        var d1 = fm - fprev;
+        var d2 = fm - fnext;
+        var mode = L;
+        if ((d1 + d2) !== 0) {
+            mode = L + h * (d1 / (d1 + d2));
+        } else {
+            mode = (L + U) / 2; // fallback to midpoint
         }
-        else if (p==0) {
-            var mode =eff[p*2]+(eff[p*2+1]-eff[p*2])*(nbg[p])/(nbg[p]+nbg[p]-nbg[p+1])
-        }
-        else{var mode =eff[p*2]+(eff[p*2+1]-eff[p*2])*(nbg[p-1]-nbg[p-2])/(nbg[p-1]-nbg[p-2]+nbg[p-1]-nbg[p])}
-        mode=Number((mode).toFixed(3));
+        mode = Number(mode.toFixed(3));
             document.getElementsByClassName("mode")[0].innerHTML+= mode; 
         // moyenne
         var s=0;
@@ -497,30 +491,34 @@
 
         // ecart absolue moyenne mediane
         var s=0;
-        for (var i = 0; i <nbg.length-1; i++) {
+        for (var i = 0; i < nbg.length; i++) {
                 var j=i*2;
                 var ci=(eff[j]+eff[j+1])/2;
-                s=s+nbg[i]*(Math.abs(ci-mediane)) ;
+                s = s + nbg[i] * Math.abs(ci - mediane);
             }
-            var emed=Number(s/pop.toFixed(3));
+            var emed=Number((s/pop).toFixed(3));
             document.getElementsByClassName("emed")[0].innerHTML+= emed; 
 
         // ecart absolue moyenne moyenne
         var s=0;
-        for (var i = 0; i <nbg.length-1; i++) {
+        for (var i = 0; i < nbg.length; i++) {
                 var j=i*2;
                 var ci=(eff[j]+eff[j+1])/2;
-                s=s+nbg[i]*(Math.abs(ci-X)) ;
+                s = s + nbg[i] * Math.abs(ci - X);
             }
-            var emoy=Number(s/pop.toFixed(3));
+            var emoy=Number((s/pop).toFixed(3));
             document.getElementsByClassName("emoy")[0].innerHTML+= emoy; 
-        // indice de gini 
-        var ig=0;
-                for (let i = 0; i < nbg.length-1; i++) {
-                    ig=ig+(aq[i+1]*af[i]-aq[i]*af[i+1])
-                }
-                var round= Number(ig.toFixed(3));
-                document.getElementsByClassName("ing")[0].innerHTML+= round; 
+        // indice de gini (standard trapezoid method on Lorenz curve)
+        var F = [0].concat(af);
+        var S = [0].concat(aq);
+        if (F[F.length-1] !== 1) { F[F.length-1] = 1; }
+        if (S[S.length-1] !== 1) { S[S.length-1] = 1; }
+        var area = 0;
+        for (let i = 1; i < F.length; i++) {
+            area += ((S[i] + S[i-1]) * (F[i] - F[i-1])) / 2;
+        }
+        var gini = Number((1 - 2*area).toFixed(3));
+        document.getElementsByClassName("ing")[0].innerHTML+= gini; 
                 
         // form
         
